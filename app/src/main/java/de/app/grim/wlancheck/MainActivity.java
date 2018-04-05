@@ -8,7 +8,6 @@ import android.content.pm.ResolveInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Process;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -29,30 +28,17 @@ public class MainActivity extends Activity {
         endButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Process.killProcess(Process.myPid());
-                System.exit(0);
+                endThisApp();
             }
         });
 
-        ConnectivityManager conMgr = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = conMgr.getActiveNetworkInfo();
-
-        if (networkInfo != null && networkInfo.getType() == ConnectivityManager.TYPE_WIFI && networkInfo.isConnected()) {
-            Intent searchYT = new Intent(Intent.ACTION_MAIN);
-            searchYT.addCategory(Intent.CATEGORY_LAUNCHER);
-
-            PackageManager packMgr = getPackageManager();
-            List<ResolveInfo> packageInfo = packMgr.queryIntentActivities(searchYT, 0);
+        if (isWlanConnected()) {
+            List<ResolveInfo> packageInfo = getPackageInfos();
 
             for (ResolveInfo info : packageInfo) {
                 if (info.activityInfo.packageName.equals(YOUTUBE_PACKAGE_NAME)) {
-                    Intent startYT = new Intent(Intent.ACTION_MAIN);
-                    startYT.addCategory(Intent.CATEGORY_LAUNCHER);
-                    startYT.setComponent(new ComponentName(info.activityInfo.packageName, info.activityInfo.name));
-                    startYT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(startYT);
-                    android.os.Process.killProcess(android.os.Process.myPid());
-                    System.exit(0);
+                    startOtherApp(info);
+                    endThisApp();
                     return;
                 }
             }
@@ -60,5 +46,32 @@ public class MainActivity extends Activity {
         } else {
             messageView.setText(R.string.no_wlan);
         }
+    }
+
+    private boolean isWlanConnected() {
+        ConnectivityManager conMgr = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = conMgr.getActiveNetworkInfo();
+        return networkInfo != null && networkInfo.getType() == ConnectivityManager.TYPE_WIFI && networkInfo.isConnected();
+    }
+
+    private List<ResolveInfo> getPackageInfos() {
+        Intent searchYT = new Intent(Intent.ACTION_MAIN);
+        searchYT.addCategory(Intent.CATEGORY_LAUNCHER);
+
+        PackageManager packMgr = getPackageManager();
+        return packMgr.queryIntentActivities(searchYT, 0);
+    }
+
+    private void startOtherApp(ResolveInfo info) {
+        Intent startYT = new Intent(Intent.ACTION_MAIN);
+        startYT.addCategory(Intent.CATEGORY_LAUNCHER);
+        startYT.setComponent(new ComponentName(info.activityInfo.packageName, info.activityInfo.name));
+        startYT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(startYT);
+    }
+
+    private void endThisApp() {
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
     }
 }
